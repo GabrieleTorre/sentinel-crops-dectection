@@ -7,7 +7,7 @@ utae-paps/predict_crop_segmentation.py
 ```
 
 
-### Visualization results tool 
+### Visualization Results tool:
 ```console
 utae-paps/Visualize_Segmentation_Results.ipynb
 ```
