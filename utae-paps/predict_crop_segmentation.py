@@ -99,12 +99,15 @@ def main(PATH_TO_REPO, PATH_TO_DATA, PATH_TO_NORM, PATH_TO_UTAE_WEIGHTS,
 
 
 if __name__ == "__main__":
+    from os.path import join
 
-    PATH_TO_REPO             = '/projects/DeepLeey/agri-tech/segmentation/utae-paps/'
+    root_dir= '/projects/DeepLeey/agri-tech/sentinel-segmentation/crop-type/sentinel-crops-dectection/'
+
+    PATH_TO_REPO             = join(root_dir, 'utae-paps/')
     PATH_TO_DATA             = '/data/2/Sentinel2-crops/*/*/'
-    PATH_TO_NORM             = '/projects/DeepLeey/agri-tech/segmentation/utae-paps'
-    PATH_TO_UTAE_WEIGHTS     = '/projects/DeepLeey/agri-tech/segmentation/UTAE_zenodo/'
-    PATH_TO_UTAEPaPs_WEIGHTS = '/projects/DeepLeey/agri-tech/segmentation/UTAE_PAPs/'
+    PATH_TO_NORM             = join(root_dir, 'utae-paps')
+    PATH_TO_UTAE_WEIGHTS     = join(root_dir, 'UTAE_zenodo')
+    PATH_TO_UTAEPaPs_WEIGHTS = join(root_dir, 'UTAE_PAPs')
 
     device                   = torch.device('cuda:0')
 
