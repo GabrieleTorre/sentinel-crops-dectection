@@ -25,8 +25,8 @@ def load_model(path, device, fold=1, mode='semantic'):
     with open(os.path.join(path, 'conf.json')) as file:
         config = json.loads(file.read())
     config = Namespace(**config)
-    model = get_model(config, mode = mode).to(device)
 
+    model = get_model(config, mode = mode).to(device)
     sd = torch.load(
         os.path.join(path, "Fold_{}".format(fold+1), "model.pth.tar"),
         map_location=device
@@ -76,7 +76,8 @@ def get_data(df, PATH_TO_NORM, nbands=10):
 
 
 def main(PATH_TO_REPO, PATH_TO_DATA, PATH_TO_NORM, PATH_TO_UTAE_WEIGHTS,
-         PATH_TO_UTAEPaPs_WEIGHTS, device, utae, fovCloudThresh=0.05):
+         PATH_TO_UTAEPaPs_WEIGHTS, device, utae, fovCloudThresh=0.05,
+         mode='semantic'):
 
     ## Reading Events Data
     df = get_data_df(PATH_TO_DATA)
@@ -89,33 +90,44 @@ def main(PATH_TO_REPO, PATH_TO_DATA, PATH_TO_NORM, PATH_TO_UTAE_WEIGHTS,
 
     with torch.no_grad():
         sempred = utae(x, batch_positions=dates)
-        #sempred = sempred.argmax(dim=1)
-    
-    sempred = sempred.max(dim=1)
-    sempred = np.concatenate([  sempred.indices.detach().cpu().numpy(), 
-                                sempred.values.detach().cpu().numpy()],
-                                axis=0) 
-    np.save(PATH_TO_DATA+'/crops_segmentation.npy', sempred)
+
+    if mode == 'semantic':
+        sempred = sempred.squeeze().max(dim=0)
+        sempred = np.stack([sempred.indices.detach().cpu().numpy(),
+                            sempred.values.detach().cpu().numpy()],
+                            axis=0)
+        np.save(PATH_TO_DATA+'/crops_semantic.npy', sempred)
+
+    if mode == 'panoptic':
+        sempred = sempred['pano_semantic'].squeeze().max(axis=0)
+        sempred = np.stack([sempred.indices.detach().cpu().numpy(),
+                            sempred.values.detach().cpu().numpy()],
+                            axis=0)
+        import pdb; pdb.set_trace()
+        np.save(PATH_TO_DATA+'/crops_panoptic.npy', sempred)
 
 
 if __name__ == "__main__":
     from os.path import join
 
-    root_dir= '/projects/DeepLeey/agri-tech/sentinel-segmentation/crop-type/sentinel-crops-dectection/'
+    root_dir= ('/projects/DeepLeey/agri-tech/sentinel-segmentation/' +
+               'crop-type/sentinel-crops-dectection/')
 
     PATH_TO_REPO             = join(root_dir, 'utae-paps/')
     PATH_TO_DATA             = '/data/2/Sentinel2-crops/*/*/'
     PATH_TO_NORM             = join(root_dir, 'utae-paps')
     PATH_TO_UTAE_WEIGHTS     = join(root_dir, 'UTAE_zenodo')
+    #PATH_TO_UTAE_WEIGHTS     = join(root_dir, 'UTAE_PAPs-new-train')
     PATH_TO_UTAEPaPs_WEIGHTS = join(root_dir, 'UTAE_PAPs')
 
     device                   = torch.device('cuda:0')
+    mode                     = 'semantic' #'semantic'-'panoptic'
 
     sys.path.append(PATH_TO_REPO)
 
-    utae = load_model(PATH_TO_UTAE_WEIGHTS, device=device, fold=3,
-                      mode='semantic').eval()
+    weights_file = PATH_TO_UTAEPaPs_WEIGHTS if mode == 'panoptic' else PATH_TO_UTAE_WEIGHTS
+    utae = load_model(weights_file, device=device, fold=3, mode=mode).eval()
 
     for x in tqdm(glob(PATH_TO_DATA)):
         main(PATH_TO_REPO, x, PATH_TO_NORM, PATH_TO_UTAE_WEIGHTS,
-             PATH_TO_UTAEPaPs_WEIGHTS, device, utae)
+             PATH_TO_UTAEPaPs_WEIGHTS, device, utae, mode=mode)
